@@ -21,6 +21,10 @@ try:
 except ImportError:
     from . import keyring
 
+if gnomekeyring and gnomekeyring.is_available():
+    HAS_GNOMEKEYRING = True
+else:
+    HAS_GNOMEKEYRING = False
 
 from .ui import resources_rc
 from .ui import login as login_ui
@@ -39,6 +43,8 @@ class Login(QtGui.QDialog):
     # Constants that control where the settings are saved
     SETTINGS_APPLICATION = "Sgtk Login Framework"
     SETTINGS_ORGANIZATION = "Shotgun Software"
+    SETTINGS_APPLICATION_NAME = "com.shotgunsoftware.framework_login"
+    SETTINGS_SITE = ""
 
     # Logging
     __logger = logging.getLogger( "tk-framework-login.login")
@@ -138,7 +144,7 @@ class Login(QtGui.QDialog):
         raise NotImplementedError
 
     @classmethod
-    def _set_extra_credentials(cls):
+    def set_extra_credentials(cls):
         """
         Store extra credentials settings needed for login
         
@@ -186,6 +192,13 @@ class Login(QtGui.QDialog):
         return (site, login)
 
     @classmethod
+    def __get_keyring_root(cls):
+        """ Returns the keyring root to use """
+        if HAS_GNOMEKEYRING:
+            return "Login"
+        return cls.SETTINGS_APPLICATION_NAME
+
+    @classmethod
     def __get_saved_values(cls):
         """ return a tuple of all the stored values """
         # load up the values stored via qsettings
@@ -193,7 +206,7 @@ class Login(QtGui.QDialog):
 
         # load up the values stored securely in the os specific keyring
         if login:
-            password = keyring_get_password("%s.login" % KEYRING_ROOT, login)
+            password = keyring_get_password("%s.login" % cls.__get_keyring_root(), login)
         else:
             password = None
 
@@ -207,7 +220,7 @@ class Login(QtGui.QDialog):
         settings.beginGroup("loginInfo")
         login = settings.value("login", None)
         settings.endGroup()
-        keyring_delete_password("%s.login" % KEYRING_ROOT, login)
+        keyring_delete_password("%s.login" % cls.__get_keyring_root(), login)
 
     @classmethod
     def __clear_saved_values(cls):
@@ -238,7 +251,7 @@ class Login(QtGui.QDialog):
         settings.endGroup()
 
         # save these settings securely in the os specific keyring
-        keyring_set_password("%s.login" % KEYRING_ROOT, login, password)
+        keyring_set_password("%s.login" % cls.__get_keyring_root(), login, password)
 
     @classmethod
     def __check_values(cls, site, login, password):
@@ -335,7 +348,7 @@ class Login(QtGui.QDialog):
         (site, login, password) = self.__get_saved_values()
 
         # populate the ui
-        self.ui.site.setText(site or "")
+        self.ui.site.setText(site or self.SETTINGS_SITE)
         self.ui.login.setText(login or "")
         self.ui.password.setText(password or "")
 
@@ -433,14 +446,12 @@ def __gnomekeyring_get_item(login, create=False):
     item = gnomekeyring.item_get_info_sync("Login", item_key)
     return item, item_key
 
-if gnomekeyring and gnomekeyring.is_available():
-    KEYRING_ROOT = "Login"
+if HAS_GNOMEKEYRING:
     keyring_get_password = _gnomekeyring_get_password
     keyring_set_password = _gnomekeyring_set_password
     keyring_delete_password = _gnomekeyring_delete_password
     keyring_get_keyring = _gnomekeyring_get_keyring
 else:
-    KEYRING_ROOT = "com.shotgunsoftware.desktop"
     keyring_get_password = keyring.get_password
     keyring_set_password = keyring.set_password
     keyring_delete_password = keyring.delete_password

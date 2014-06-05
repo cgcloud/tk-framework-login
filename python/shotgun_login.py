@@ -21,9 +21,10 @@ class ShotgunLogin(Login):
 
     SETTINGS_APPLICATION = "Shotgun Logging"
     SETTINGS_ORGANIZATION = "Shotgun Software"
+    SETTINGS_APPLICATION_NAME = "com.shotgunsoftware.shotgunlogin"
 
     # Logging
-    __logger = logging.getLogger("tk-framework-login.shotgun_login")
+    __logger = logging.getLogger("tk-framework-login.shotgunlogin")
 
     @classmethod
     def _site_connect(cls, site, login, password):
