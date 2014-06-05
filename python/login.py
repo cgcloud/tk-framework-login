@@ -37,7 +37,7 @@ class Login(QtGui.QDialog):
     """
 
     # Constants that control where the settings are saved
-    SETTINGS_APPLICATION = "Shotgun Login Framework"
+    SETTINGS_APPLICATION = "Sgtk Login Framework"
     SETTINGS_ORGANIZATION = "Shotgun Software"
 
     # Logging
@@ -138,7 +138,7 @@ class Login(QtGui.QDialog):
         raise NotImplementedError
 
     @classmethod
-    def set_extra_credentials(cls):
+    def _set_extra_credentials(cls):
         """
         Store extra credentials settings needed for login
         
@@ -348,43 +348,6 @@ class Login(QtGui.QDialog):
 
         self.__save_values(site, login, password)
 
-################################################################################
-# Shotgun Login Implementation
-
-class ShotgunLogin(Login):
-
-    SETTINGS_APPLICATION = "Shotgun Desktop"
-    SETTINGS_ORGANIZATION = "Shotgun Software"
-
-    # Logging
-    __logger = logging.getLogger("tk-desktop.login")
-
-    @classmethod
-    def _site_connect(cls, site, login, password):
-        """
-        Authenticate the given values in Shotgun.
-
-        Return a valid authenticated connection or raise an Exception
-        """
-        # package shotgun_api3 until toolkit upgrades to a version that
-        # allows for user based logins
-        from ..shotgun_api3 import Shotgun
-
-        # try to connect to Shotgun
-        try:
-            # connect and force an exchange so the authentication is validated
-            connection = Shotgun(site, login=login, password=password)
-            connection.find_one("HumanUser", [])
-        except Exception, e:
-            raise LoginError("Could not connect to server", str(e))
-
-        try:
-            result = connection.authenticate_human_user(login, password)
-            if result is None:
-                raise LoginError("Could not log in to server", "Login not valid.")
-            return result
-        except Exception, e:
-            raise LoginError("Could not log in to server", str(e))
 
 ################################################################################
 # Gnome Keyring Implementation
