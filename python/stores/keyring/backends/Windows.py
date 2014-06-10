@@ -109,6 +109,9 @@ class WinVaultKeyring(KeyringBackend):
             raise RuntimeError("Requires Windows and pywin32")
         return 5
 
+    def encrypted(self):
+        return True
+
     @staticmethod
     def _compound_name(username, service):
         return escape.u('%(username)s@%(service)s') % vars()

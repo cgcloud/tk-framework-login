@@ -8,157 +8,268 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from __future__ import absolute_import
-
-import uuid
 import logging
+from urlparse import urlparse
 
-from tank.platform.qt import QtCore, QtGui
+from . import stores
+from . import LoginError
+from .login_dialog import LoginDialog
 
-gnomekeyring = False
-try:
-    import gnomekeyring
-except ImportError:
-    from . import keyring
-
-if gnomekeyring and gnomekeyring.is_available():
-    HAS_GNOMEKEYRING = True
-else:
-    HAS_GNOMEKEYRING = False
-
-from .ui import resources_rc
-from .ui import login as login_ui
+from .qt_abstraction import QtCore
 
 
-class LoginError(Exception):
-    """ Generic login specific exceptions """
-    pass
-
-class Login(QtGui.QDialog):
+class Login(object):
     """
-    Manage authenticating a Pix login
+    Manage authenticating a login
 
+    This is an abstract class that provides an abstraction over storing login information
+    for a service.  For each service it stores a site specification (for example the url
+    to log into), a login (for example the username to log in with) and a password.  The
+    site and password are stored in a non-encrypted settings file, whereas the password is
+    stored in an encrypted keyring, using operating specific implementations.
+
+    To use the interface you should simply be able to request the login info from an
+    implementation:
+        login_manager = LoginImplementation.get_instance_for_namespace("My Application")
+        login_info = login_manager.login()
+
+    If the login info has already been collected, it will be returned.  If the saved values
+    successfully authenticate, then the resulting login info will be returned.  Otherwise a
+    dialog is shown to the user to collect site/login/password.
+
+    To subclass, you must at a minimum implement _site_connect, who should validate the
+    connection information.
+
+    By default, the public settings are stored by Qt's QSettings, which will use the
+    QApplication's applicationName and organizationName to figure out where to store the
+    settings file.  This can be overridden by implementing the _get_settings method in
+    a subclass.
+
+    By default, the keyring used on the system will be named after the site (for example
+    if logging into http://www.google.com, it would be "www.google.com.login") and the key
+    would be the login being used.  These defaults can be overridden by implementing the
+    _get_keyring_values method in a subclass.
+
+    The default dialog that pops up can be overridden by changing the value of _dialog_class.
+    The value of _dialog_kwargs will be passed to the dialog constructor.  See the docs from
+    login_dialog.LoginDialog for what the valid arguments are for the default dialog.
     """
-
-    # Constants that control where the settings are saved
-    SETTINGS_APPLICATION = "Sgtk Login Framework"
-    SETTINGS_ORGANIZATION = "Shotgun Software"
-    SETTINGS_APPLICATION_NAME = "com.shotgunsoftware.framework_login"
-    SETTINGS_SITE = ""
 
     # Logging
-    __logger = logging.getLogger( "tk-framework-login.login")
+    _logger = logging.getLogger("tk-framework-login.login")
+
+    # Instance cache
+    _instances = {}  # cache of Login objects by namespace
+
+    ##########################################################################################
+    # class methods
+    @classmethod
+    def get_instance_for_namespace(cls, namespace):
+        """
+        Returns a Login instance for the given namespace.  If the instance already
+        exists it is returned.  This acts as a factory to make it easy to reuse instances
+        of a login manager.
+
+        :param namespace: A string that acts as a lookup for the login manager.
+
+        :returns: An instance of a login manager
+        """
+        # return the already created object if it exists
+        if namespace in cls._instances:
+            return cls._instances[namespace]
+
+        # otherwise create it, cache it, and return it
+        instance = cls()
+        cls._instances[namespace] = instance
+        return instance
 
     ##########################################################################################
     # public methods
+    def __init__(self):
+        """ Initialize a login manager """
+        # control over the dialog that gets launched
+        self._dialog_class = LoginDialog
+        self._dialog_kwargs = {}
 
-    @classmethod
-    def get_site(cls):
-        """ returns the default site """
-        (site, login) = cls.__get_public_values()
-        cls.__logger.debug("get_site = %s", site)
-        return site
+        # keyring implementation to use
+        self._store = stores.KeyringStore()
 
-    @classmethod
-    def get_login(cls, dialog_message=None, force_dialog=False):
+        # cache of authenticated values
+        self._login_info = None
+
+    def login(self, site=None, dialog_message=None, force_dialog=False):
         """
-        Return the login dictionary for the currently authenticated user.
+        Return the login info for the current authenticated login.
 
         This will check saved values to see if there is a valid login
         cached. If no valid cached login information is found, a login
         dialog is displayed.
 
-        This method returns a HumanUser dict for the login if it succeeds and
-        None if it fails.
+        :param site: The site to get the login for (None implies the default site)
         :param dialog_message: A message to display in the login dialog
         :param force_dialog: If True, pop up the dialog even if some valid credentials are retrieved
+
+        :returns: None on failure and an implementation specific representation on success
         """
-        # first check in memory cache
-        result = getattr(cls, "_%s__login" % cls.__name__, None)
-        if result and not force_dialog:
-            return result
+        if site is not None:
+            raise NotImplementedError("support for multiple sites is not yet implemented")
 
-        # next see if the saved values return a valid user
-        result = cls.__check_saved_values()
-        if result and not force_dialog:
-            return cls.__login
+        if not force_dialog:
+            # first check in memory cache
+            if self._login_info is not None:
+                return self._login_info
 
-        # saved values did not authenticate run the dialog
-        result = cls.__run_dialog(dialog_message)
+            # next see if the saved values return a valid user
+            result = self._check_saved_values()
+            if result:
+                return self._login_info
+
+        # forcing dialog or cache/saved values did not authenticate
+        result = self._run_dialog(dialog_message)
         if result:
-            return cls.__login
+            return self._login_info
 
         # failed
         return None
 
-    @classmethod
-    def get_connection(cls, dialog_message=None):
-        """
-        Return an authenticated connection.
-
-        This will check saved values to see if there is a valid login cached. 
-        If no valid cached login information is found, a login
-        dialog is displayed.
-
-        This method returns a connection if it succeeds and None if
-        it fails.
-        """
-        # first check in memory cache
-        result = getattr(cls, "_%s__connection" % cls.__name__, None)
-        if result:
-            return result
-
-        # next see if the saved values return a valid user
-        result = cls.__check_saved_values()
-        if result:
-            return cls.__connection
-
-        # saved values did not authenticate run the dialog
-        result = cls.__run_dialog(dialog_message)
-        if result:
-            return cls.__connection
-
-        # failed
-        return None
-
-    @classmethod
-    def logout(cls):
+    def logout(self, site=None):
         """
         Log out of the current connection.
 
-        This will clear any stored values and require a new login to retrieve
-        any further login on connection information.
-        """
-        cls.__login = None
-        cls.__connection = None
-        cls.__clear_password()
+        This will clear any cached values and the stored password
 
-    @classmethod
-    def _site_connect(cls, site, login, password):
+        :param site: The site to log out of (None implies the default site)
         """
-        Authenticate the given values against the given site.
+        if site is not None:
+            raise NotImplementedError("support for multiple sites is not yet implemented")
 
-        Needs to be implemented in classes deriving from this one
-        And should always return a valid authenticated connection or raise an Exception.
-        """
-        raise NotImplementedError
+        self._login_info = None
+        self._clear_password()
 
-    @classmethod
-    def set_extra_credentials(cls):
+    ##########################################################################################
+    # pure virtual methods
+    def _site_connect(self, site, login, password):
         """
-        Store extra credentials settings needed for login
-        
-        Needs to be implemented ( if needed ) in classes deriving from this one
+        Authenticate the given values against the given site.  The return value will be
+        cached and returned by login.
+
+        Needs to be implemented in classes deriving from this one.
+
+        :param site: The site to login to
+        :param login: The login to use
+        :param password: The password to use
+
+        :returns: An object representing the logged in information
+
+        :raises: LoginError on failure.
         """
         raise NotImplementedError
 
     ##########################################################################################
-    # private class methods
+    # protected methods
 
-    @classmethod
-    def __run_dialog(cls, dialog_message):
+    # read values ############################################################################
+    def _get_saved_values(self):
+        """ Return a tuple of all the stored values """
+        # load up the values stored
+        (site, login) = self._get_public_values()
+
+        # load up the values stored securely in the os specific keyring
+        if login:
+            (keyring, keyring_login) = self._get_keyring_values(site, login)
+            password = self._store.get_password(keyring, keyring_login)
+        else:
+            password = None
+
+        return (site, login, password)
+
+    def _get_public_values(self):
+        """ Return a tuple of the values that are stored unencrypted """
+        settings = self._get_settings("loginInfo")
+        site = settings.value("site", None)
+        login = settings.value("login", None)
+        return (site, login)
+
+    # set values #############################################################################
+    def _save_values(self, site, login, password):
+        """ Save the given values, saving the password securely """
+
+        # make sure the keyring supports encryption
+        if not self._store.is_encrypted():
+            raise LoginError("keyring does not support encryption")
+
+        # save the public settings
+        settings = self._get_settings("loginInfo")
+        settings.setValue("site", site)
+        settings.setValue("login", login)
+
+        # save these settings securely in the os specific keyring
+        (keyring, keyring_login) = self._get_keyring_values(site, login)
+        self._store.set_password(keyring, keyring_login, password)
+
+    # clear values ###########################################################################
+    def _clear_password(self):
+        """ clear password value """
+        # remove settings stored in the os specific keyring
+        settings = self._get_settings("loginInfo")
+        site = settings.value("site", None)
+        login = settings.value("login", None)
+
+        (keyring, keyring_login) = self._get_keyring_values(site, login)
+        self._store.delete_password(keyring, keyring_login)
+
+    def _clear_saved_values(self):
+        """ clear any saved values """
+        # clear the stored password
+        self._clear_password()
+
+        # remove settings stored via QSettings
+        settings = self._get_settings("loginInfo")
+        settings.remove("")
+
+    # validate values ########################################################################
+    def _check_saved_values(self):
+        """ return whether the saved values authenticate or not """
+        (site, login, password) = self._get_saved_values()
+        try:
+            return self._check_values(site, login, password)
+        except LoginError:
+            return False
+
+    def _check_values(self, site, login, password):
+        """
+        Authenticate the given values
+
+        Will always return True or raise a LoginError.
+        """
+        # If either login or password is not set
+        # don't even try to login with the credentials
+        if login is None or password is None:
+            raise LoginError("Empty credentials")
+
+        # try to connect to the site
+        try:
+            results = self._site_connect(site, login, password)
+        except Exception, e:
+            raise LoginError("Could not connect to server", str(e))
+
+        # cache results
+        self._login_info = results
+
+        return True
+
+    # utilities ##############################################################################
+    def _get_settings(self, group=None):
+        """ Returns the QSettings object to store the values in """
+        settings = QtCore.QSettings()
+
+        if group is not None:
+            settings.beginGroup(group)
+        return settings
+
+    def _run_dialog(self, dialog_message):
         """ run the login dialog """
-        dialog = cls()
+        dialog = self._dialog_class(self, **self._dialog_kwargs)
         if dialog_message is not None:
             dialog.set_message(dialog_message)
         dialog.raise_()
@@ -170,289 +281,16 @@ class Login(QtGui.QDialog):
         # dialog was canceled
         return False
 
-    @classmethod
-    def __check_saved_values(cls):
-        """ return whether the saved values authenticate or not """
-        (site, login, password) = cls.__get_saved_values()
-        try:
-            return cls.__check_values(site, login, password)
-        except LoginError:
-            return False
-
-    @classmethod
-    def __get_public_values(cls):
-        """ return the values that are stored unencrypted """
-        settings = QtCore.QSettings(cls.SETTINGS_ORGANIZATION, cls.SETTINGS_APPLICATION)
-
-        settings.beginGroup("loginInfo")
-        site = settings.value("site", None)
-        login = settings.value("login", None)
-        settings.endGroup()
-
-        return (site, login)
-
-    @classmethod
-    def __get_keyring_root(cls):
-        """ Returns the keyring root to use """
-        if HAS_GNOMEKEYRING:
-            return "Login"
-        return cls.SETTINGS_APPLICATION_NAME
-
-    @classmethod
-    def __get_saved_values(cls):
-        """ return a tuple of all the stored values """
-        # load up the values stored via qsettings
-        (site, login) = cls.__get_public_values()
-
-        # load up the values stored securely in the os specific keyring
-        if login:
-            password = keyring_get_password("%s.login" % cls.__get_keyring_root(), login)
-        else:
-            password = None
-
-        return (site, login, password)
-
-    @classmethod
-    def __clear_password(cls):
-        """ clear password value """
-        # remove settings stored in the os specific keyring
-        settings = QtCore.QSettings(cls.SETTINGS_ORGANIZATION, cls.SETTINGS_APPLICATION)
-        settings.beginGroup("loginInfo")
-        login = settings.value("login", None)
-        settings.endGroup()
-        keyring_delete_password("%s.login" % cls.__get_keyring_root(), login)
-
-    @classmethod
-    def __clear_saved_values(cls):
-        """ clear any saved values """
-        settings = QtCore.QSettings(cls.SETTINGS_ORGANIZATION, cls.SETTINGS_APPLICATION)
-
-        # remove settings stored via QSettings
-        settings.beginGroup("loginInfo")
-        settings.remove("")
-        settings.endGroup()
-
-        cls.__clear_password()
-
-    @classmethod
-    def __save_values(cls, site, login, password):
-        """ save the given values securely """
-
-        # make sure the keyring supports encryption
-        kr = keyring_get_keyring()
-        if not kr.encrypted():
-            raise LoginError("keyring does not support encryption")
-
-        # save the settings via qsettings
-        settings = QtCore.QSettings(cls.SETTINGS_ORGANIZATION, cls.SETTINGS_APPLICATION)
-        settings.beginGroup("loginInfo")
-        settings.setValue("site", site)
-        settings.setValue("login", login)
-        settings.endGroup()
-
-        # save these settings securely in the os specific keyring
-        keyring_set_password("%s.login" % cls.__get_keyring_root(), login, password)
-
-    @classmethod
-    def __check_values(cls, site, login, password):
+    def _get_keyring_values(self, site, login):
         """
-        Authenticate the given values in Shotgun.
+        Returns the values needed to locate a key in a keyring.  The default implementation
+        returns the host portion of the site url and the login itself.
 
-        Will always return True or raise a LoginError.
+        :param site: Site to get the keyring/login for
+        :param login: Login to get the keyring/login for
+
+        :returns: A tuple (keyring, login) where the keyring is the keyring
+                  to use and the login is the login for that keyring to use.
         """
-        # If either login or password is not set
-        # don't even try to login with the credentials
-        if login is None or password is None:
-            raise LoginError("Empty credentials")
-
-        # try to connect to the site
-        try:
-            result = cls._site_connect(site, login, password)
-        except Exception, e:
-            raise LoginError("Could not connect to server", str(e))
-
-        # cache results
-        cls.__login = result
-        cls.__connection = result
-
-        return True
-
-    ##########################################################################################
-    # instance methods
-
-    def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
-
-        # set the dialog to not have window decorations and always stay on top
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-
-        # setup the gui
-        self.ui = login_ui.Ui_LoginDialog()
-        self.ui.setupUi(self)
-        self.load_settings()
-
-        # default focus
-        if self.ui.site.text():
-            self.ui.login.setFocus()
-            self.ui.login.selectAll()
-        else:
-            self.ui.site.setFocus()
-
-        self.connect(self.ui.sign_in, QtCore.SIGNAL("clicked()"), self.ok_pressed)
-        self.connect(self.ui.cancel, QtCore.SIGNAL("clicked()"), self.cancel_pressed)
-
-    def set_message(self, message):
-        """ Set the message in the dialog """
-        self.ui.message.setText(message)
-
-    def cancel_pressed(self):
-        self.close()
-
-    def ok_pressed(self):
-        """
-        validate the values, accepting if login is successful and display an error message if not.
-        """
-        # pull values from the gui
-        site = self.ui.site.text()
-        login = self.ui.login.text()
-        password = self.ui.password.text()
-
-        # if not protocol specified assume https
-        if len(site.split("://")) == 1:
-            site = "https://%s" % site
-            self.ui.site.setText(site)
-        try:
-            # try and authenticate
-            self.__check_values(site, login, password)
-        except LoginError, e:
-            # authentication did not succeed
-            self.ui.message.setText("%s\n\n%s" % (e[0], e[1]))
-            return
-
-        # all good, save the settings if requested and return accepted
-        try:
-            self.ui.message.setText("")
-            self.save_settings()
-        except LoginError:
-            # error saving the settings
-            self.ui.message.setText(
-                "Could not store login information safely.\n\n" +
-                "Please uncheck \"Remember me\" to continue.")
-            return
-
-        # dialog is done
-        self.accept()
-
-    def load_settings(self):
-        """ Load the saved values for the dialog """
-        (site, login, password) = self.__get_saved_values()
-
-        # populate the ui
-        self.ui.site.setText(site or self.SETTINGS_SITE)
-        self.ui.login.setText(login or "")
-        self.ui.password.setText(password or "")
-
-    def save_settings(self):
-        """ Save the values from the dialog """
-        # pull values from the gui
-        site = self.ui.site.text()
-        login = self.ui.login.text()
-        password = self.ui.password.text()
-
-        self.__save_values(site, login, password)
-
-
-################################################################################
-# Gnome Keyring Implementation
-
-
-def _gnomekeyring_get_password(kerying, login):
-    item, _ = __gnomekeyring_get_item(login)
-    if item is None:
-        return None
-    return item.get_secret()
-
-
-def _gnomekeyring_set_password(keyring, login, password):
-    __gnomekeyring_get_item(login, create=True)
-    login_key = __gnomekeyring_key_for_login(login)
-    gnomekeyring.item_create_sync(
-        "Login", gnomekeyring.ITEM_GENERIC_SECRET,
-        login_key, {}, password, True)
-
-
-def _gnomekeyring_delete_password(keyring, login):
-    _, item_id = __gnomekeyring_get_item(login)
-    if item_id is not None:
-        gnomekeyring.item_delete_sync("Login", item_id)
-
-
-def _gnomekeyring_get_keyring():
-    return GnomeKeyring()
-
-
-# Fake class since gnome keyring is always encrypted
-class GnomeKeyring(object):
-    def encrypted(self):
-        return True
-
-
-def __gnomekeyring_get_keychain_password():
-    password, ok = QtGui.QInputDialog.getText(
-        None,
-        "Keychain Password",
-        "Enter a password to protect your login info:",
-        QtGui.QLineEdit.Password
-    )
-
-    if ok:
-        return password
-    return None
-
-
-def __gnomekeyring_key_for_login(login):
-    return "%s@www.shotgunsoftware.com" % login
-
-
-def __gnomekeyring_get_item(login, create=False):
-    login_key = __gnomekeyring_key_for_login(login)
-
-    try:
-        item_keys = gnomekeyring.list_item_ids_sync("Login")
-    except gnomekeyring.NoSuchKeyringError:
-        if create:
-            password = __gnomekeyring_get_keychain_password()
-            if password is not None:
-                gnomekeyring.create_sync("Login", password)
-                item_keys = []
-        return None, None
-
-    for key in item_keys:
-        item_info = gnomekeyring.item_get_info_sync("Login", key)
-        if item_info.get_display_name() == login_key:
-            return item_info, key
-
-    if not create:
-        return None, None
-
-    item_key = gnomekeyring.item_create_sync(
-        "Login",
-        gnomekeyring.ITEM_GENERIC_SECRET,
-        login_key,
-        {},
-        str(uuid.uuid4()),
-        True
-    )
-    item = gnomekeyring.item_get_info_sync("Login", item_key)
-    return item, item_key
-
-if HAS_GNOMEKEYRING:
-    keyring_get_password = _gnomekeyring_get_password
-    keyring_set_password = _gnomekeyring_set_password
-    keyring_delete_password = _gnomekeyring_delete_password
-    keyring_get_keyring = _gnomekeyring_get_keyring
-else:
-    keyring_get_password = keyring.get_password
-    keyring_set_password = keyring.set_password
-    keyring_delete_password = keyring.delete_password
-    keyring_get_keyring = keyring.get_keyring
+        parse = urlparse(site)
+        return ("%s.login" % parse.netloc, login)

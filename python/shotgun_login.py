@@ -8,34 +8,67 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-################################################################################
-# Shotgun Login Implementation
+from urlparse import urlparse
 
 # package shotgun_api3 until toolkit upgrades to a version that
 # allows for user based logins
 from .shotgun_api3 import Shotgun
-from .login import Login, LoginError
-import logging
 
+from .login import Login
+from .login import LoginError
+
+from .qt_abstraction import QtCore
+
+
+################################################################################
+# Shotgun Login Implementation
 class ShotgunLogin(Login):
+    def get_login(self, site=None, dialog_message=None, force_dialog=False):
+        """ Returns the HumanUser for the current login.  Acts like login otherwise. """
+        results = self.login(site, dialog_message, force_dialog)
+        return results["login"]
 
-    SETTINGS_APPLICATION = "Shotgun Logging"
-    SETTINGS_ORGANIZATION = "Shotgun Software"
-    SETTINGS_APPLICATION_NAME = "com.shotgunsoftware.shotgunlogin"
+    def get_connection(self, site=None, dialog_message=None, force_dialog=False):
+        """ Returns the connection for the current login.  Acts like login otherwise. """
+        results = self.login(site, dialog_message, force_dialog)
+        return results["connection"]
 
-    # Logging
-    __logger = logging.getLogger("tk-framework-login.shotgunlogin")
+    def _get_keyring_values(self, site, login):
+        """
+        Override the base class implementation to always use a specific keyring
+        but encode the site in the login.
+        """
+        keyring = "com.shotgunsoftware.tk-framework-shotgunlogin"
+        parse = urlparse(site)
+        login = "%s@%s" % (login, parse.netloc)
+        return (keyring, login)
 
-    @classmethod
-    def _site_connect(cls, site, login, password):
+    def _get_settings(self, group=None):
+        """
+        Override the base class implementation to always use a specific
+        organization and application for the QSettings.
+        """
+        settings = QtCore.QSettings("Shotgun Software", "Shotgun Login Framework")
+
+        if group is not None:
+            settings.beginGroup(group)
+        return settings
+
+    def _site_connect(self, site, login, password):
         """
         Authenticate the given values in Shotgun.
 
-        Return a valid authenticated connection or raise an Exception
-        """
-        # package shotgun_api3 until toolkit upgrades to a version that
-        # allows for user based logins
+        :param site: The site to login to
+        :param login: The login to use
+        :param password: The password to use
 
+        :returns: A tuple of (connection, login) if successful, where connection
+            is a valid Shotgun connection to site, logged in as login, and login
+            is a HumanUser dictionary of the Entity on the Shotgun site representing
+            this login.
+
+        :raises: LoginError on failure.
+        """
         # try to connect to Shotgun
         try:
             # connect and force an exchange so the authentication is validated
@@ -45,9 +78,9 @@ class ShotgunLogin(Login):
             raise LoginError("Could not connect to server", str(e))
 
         try:
-            result = connection.authenticate_human_user(login, password)
-            if result is None:
+            user = connection.authenticate_human_user(login, password)
+            if user is None:
                 raise LoginError("Could not log in to server", "Login not valid.")
-            return result
+            return {"connection": connection, "login": user}
         except Exception, e:
             raise LoginError("Could not log in to server", str(e))
