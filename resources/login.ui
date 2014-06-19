@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>384</width>
-    <height>256</height>
+    <height>214</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@ QLineEdit:focus
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0,1,0">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0,1">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -131,19 +131,6 @@ QLineEdit:focus
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QLineEdit" name="login">
-         <property name="minimumSize">
-          <size>
-           <width>308</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="placeholderText">
-          <string>login</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QLineEdit" name="site">
          <property name="minimumSize">
           <size>
@@ -153,6 +140,19 @@ QLineEdit:focus
          </property>
          <property name="placeholderText">
           <string>example.shotgunstudio.com</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="login">
+         <property name="minimumSize">
+          <size>
+           <width>308</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>login</string>
          </property>
         </widget>
        </item>
@@ -169,6 +169,22 @@ QLineEdit:focus
          </property>
          <property name="placeholderText">
           <string>password</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="message">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -256,22 +272,6 @@ QLineEdit:focus
       </size>
      </property>
     </spacer>
-   </item>
-   <item>
-    <widget class="QLabel" name="message">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>
