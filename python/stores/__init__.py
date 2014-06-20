@@ -8,23 +8,18 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# Cascading imports to try and find the most suitable KeyringStore
-KeyringStore = None
-
-try:
-    from .gnomekeyring_store import GnomeKeyringStore
-    KeyringStore = GnomeKeyringStore
-except ImportError:
-    pass
-
-try:
-    from .keyring_store import KeyringKeyringStore
-    KeyringStore = KeyringKeyringStore
-except ImportError:
-    pass
-
 
 def get_keyring_store():
-    if KeyringStore is None:
-        raise RuntimeError("No keyring store available")
-    return KeyringStore
+    try:
+        from .gnomekeyring_store import GnomeKeyringStore
+        return GnomeKeyringStore
+    except ImportError:
+        pass
+
+    try:
+        from .keyring_store import KeyringKeyringStore
+        return KeyringKeyringStore
+    except ImportError:
+        pass
+
+    raise RuntimeError("No keyring store available")

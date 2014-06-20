@@ -92,7 +92,7 @@ class Login(object):
         self._dialog_kwargs = {}
 
         # keyring implementation to use
-        self._store = stores.KeyringStore()
+        self._store = stores.get_keyring_store()()
 
         # cache of authenticated values
         self._login_info = None
