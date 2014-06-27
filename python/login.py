@@ -219,10 +219,7 @@ class Login(object):
         self._store.delete_password(keyring, keyring_login)
 
     def _clear_saved_values(self):
-        """ clear any saved values """
-        # clear the stored password
-        self._clear_password()
-
+        """ clear non password values """
         # remove settings stored via QSettings
         settings = self._get_settings("loginInfo")
         settings.remove("")
