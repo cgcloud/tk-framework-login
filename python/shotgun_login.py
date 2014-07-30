@@ -62,7 +62,9 @@ class ShotgunLogin(Login):
     def get_connection(self, site=None, dialog_message=None, force_dialog=False):
         """ Returns the connection for the current login.  Acts like login otherwise. """
         results = self.login(site, dialog_message, force_dialog)
-        return results["connection"]
+        if results:
+            return results.get("connection")
+        return None
 
     def _get_keyring_values(self, site, login):
         """
@@ -106,12 +108,12 @@ class ShotgunLogin(Login):
             connection = Shotgun(site, login=login, password=password, http_proxy=self._http_proxy)
             connection.find_one("HumanUser", [])
         except Exception, e:
-            raise LoginError("Could not connect to server", str(e))
+            raise LoginError(str(e))
 
         try:
             user = connection.authenticate_human_user(login, password)
             if user is None:
-                raise LoginError("Could not log in to server", "Login not valid.")
+                raise LoginError("login not valid.")
             return {"connection": connection, "login": user}
         except Exception, e:
-            raise LoginError("Could not log in to server", str(e))
+            raise LoginError(str(e))

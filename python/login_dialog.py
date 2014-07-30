@@ -116,7 +116,7 @@ class LoginDialog(QtGui.QDialog):
             self._login._check_values(site, login, password)
         except LoginError, e:
             # authentication did not succeed
-            self.ui.message.setText("%s\n\n%s" % (e[0], e[1]))
+            self.ui.message.setText("<font color='red'>%s:&nbsp;&nbsp;%s</font>" % (e[0], e[1]))
             self.ui.message.show()
             return
         finally:
