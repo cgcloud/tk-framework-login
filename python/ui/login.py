@@ -13,9 +13,6 @@ class Ui_LoginDialog(object):
         LoginDialog.setObjectName("LoginDialog")
         LoginDialog.setWindowModality(QtCore.Qt.ApplicationModal)
         LoginDialog.resize(374, 324)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/tk-framework-login/shotgun_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        LoginDialog.setWindowIcon(icon)
         LoginDialog.setStyleSheet("QWidget\n"
 "{\n"
 "    background-color:  rgb(36, 39, 42);\n"
@@ -122,7 +119,6 @@ class Ui_LoginDialog(object):
         QtCore.QMetaObject.connectSlotsByName(LoginDialog)
 
     def retranslateUi(self, LoginDialog):
-        LoginDialog.setWindowTitle(QtGui.QApplication.translate("LoginDialog", "Shotgun Login", None, QtGui.QApplication.UnicodeUTF8))
         self.site.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "example.shotgunstudio.com", None, QtGui.QApplication.UnicodeUTF8))
         self.login.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "login", None, QtGui.QApplication.UnicodeUTF8))
         self.password.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "password", None, QtGui.QApplication.UnicodeUTF8))

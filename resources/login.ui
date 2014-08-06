@@ -13,13 +13,6 @@
     <height>324</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>Shotgun Login</string>
-  </property>
-  <property name="windowIcon">
-   <iconset resource="resources.qrc">
-    <normaloff>:/tk-framework-login/shotgun_logo.png</normaloff>:/tk-framework-login/shotgun_logo.png</iconset>
-  </property>
   <property name="styleSheet">
    <string notr="true">QWidget
 {
