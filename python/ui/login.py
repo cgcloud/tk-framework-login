@@ -12,58 +12,50 @@ class Ui_LoginDialog(object):
     def setupUi(self, LoginDialog):
         LoginDialog.setObjectName("LoginDialog")
         LoginDialog.setWindowModality(QtCore.Qt.ApplicationModal)
-        LoginDialog.resize(384, 214)
+        LoginDialog.resize(374, 324)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/res/shotgun_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/tk-framework-login/shotgun_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         LoginDialog.setWindowIcon(icon)
         LoginDialog.setStyleSheet("QWidget\n"
 "{\n"
-"    background-color:  rgb(72, 72, 72);\n"
-"    color: rgb(240, 240, 240);\n"
-"    selection-background-color: rgb(167, 167, 167);\n"
-"    selection-color: rgb(26, 26, 26);\n"
+"    background-color:  rgb(36, 39, 42);\n"
+"    color: rgb(192, 193, 195);\n"
+"    selection-background-color: rgb(168, 123, 43);\n"
+"    selection-color: rgb(230, 230, 230);\n"
 "    font-size: 11px;\n"
 "}\n"
 "\n"
 "QPushButton\n"
 "{\n"
-"    background-color: rgb(83, 83, 83);\n"
-"    border: 1px solid black;\n"
+"    background-color: transparent;\n"
 "    border-radius: 2px;\n"
-"    padding: 5px;\n"
-"    padding-left: 35px;\n"
-"    padding-right: 35px;\n"
-"}\n"
-"\n"
-"QPushButton:focus\n"
-"{\n"
-"    border: 1px solid rgb(185, 185, 185);\n"
+"    padding: 8px;\n"
+"    padding-left: 15px;\n"
+"    padding-right: 15px;\n"
 "}\n"
 "\n"
 "QLineEdit\n"
 "{\n"
-"    background-color: rgb(42, 42, 42);\n"
-"    border: 1px solid black;\n"
+"    background-color: rgb(29, 31, 34);\n"
+"    border: 1px solid rgb(54, 60, 66);\n"
 "    border-radius: 2px;\n"
 "    padding: 5px;\n"
+"    font-size: 12px;\n"
 "}\n"
 "\n"
 "QLineEdit:focus\n"
 "{\n"
 "    border: 1px solid rgb(48, 167, 227);\n"
+"\n"
 "}")
         LoginDialog.setModal(True)
         self.verticalLayout_2 = QtGui.QVBoxLayout(LoginDialog)
-        self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setContentsMargins(20, 20, 20, 20)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        spacerItem = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem)
         self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setSpacing(10)
+        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setSizeConstraint(QtGui.QLayout.SetMinAndMaxSize)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.verticalLayout_4 = QtGui.QVBoxLayout()
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.logo = AspectPreservingLabel(LoginDialog)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -75,66 +67,56 @@ class Ui_LoginDialog(object):
         self.logo.setAlignment(QtCore.Qt.AlignCenter)
         self.logo.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
         self.logo.setObjectName("logo")
-        self.verticalLayout_4.addWidget(self.logo)
-        spacerItem1 = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_4.addItem(spacerItem1)
-        self.horizontalLayout.addLayout(self.verticalLayout_4)
-        self.verticalLayout_3 = QtGui.QVBoxLayout()
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.horizontalLayout.addWidget(self.logo)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.site = QtGui.QLineEdit(LoginDialog)
         self.site.setMinimumSize(QtCore.QSize(308, 0))
         self.site.setObjectName("site")
-        self.verticalLayout_3.addWidget(self.site)
+        self.verticalLayout_2.addWidget(self.site)
         self.login = QtGui.QLineEdit(LoginDialog)
         self.login.setMinimumSize(QtCore.QSize(308, 0))
         self.login.setObjectName("login")
-        self.verticalLayout_3.addWidget(self.login)
+        self.verticalLayout_2.addWidget(self.login)
         self.password = QtGui.QLineEdit(LoginDialog)
         self.password.setMinimumSize(QtCore.QSize(308, 0))
         self.password.setEchoMode(QtGui.QLineEdit.Password)
         self.password.setObjectName("password")
-        self.verticalLayout_3.addWidget(self.password)
+        self.verticalLayout_2.addWidget(self.password)
         self.message = QtGui.QLabel(LoginDialog)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.message.sizePolicy().hasHeightForWidth())
         self.message.setSizePolicy(sizePolicy)
         self.message.setText("")
-        self.message.setScaledContents(True)
         self.message.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.message.setWordWrap(True)
-        self.message.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextSelectableByMouse)
+        self.message.setMargin(4)
         self.message.setObjectName("message")
-        self.verticalLayout_3.addWidget(self.message)
-        self.horizontalLayout_2 = QtGui.QHBoxLayout()
-        self.horizontalLayout_2.setSpacing(10)
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem2 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem2)
+        self.verticalLayout_2.addWidget(self.message)
+        self.button_layout = QtGui.QHBoxLayout()
+        self.button_layout.setSpacing(10)
+        self.button_layout.setContentsMargins(5, -1, -1, -1)
+        self.button_layout.setObjectName("button_layout")
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.button_layout.addItem(spacerItem)
         self.cancel = QtGui.QPushButton(LoginDialog)
         self.cancel.setStyleSheet("")
         self.cancel.setAutoDefault(False)
         self.cancel.setFlat(True)
         self.cancel.setObjectName("cancel")
-        self.horizontalLayout_2.addWidget(self.cancel)
+        self.button_layout.addWidget(self.cancel)
         self.sign_in = QtGui.QPushButton(LoginDialog)
-        self.sign_in.setStyleSheet("")
+        self.sign_in.setStyleSheet("color: rgb(248, 248, 248);\n"
+"background-color: rgb(35, 165, 225);")
         self.sign_in.setAutoDefault(False)
         self.sign_in.setDefault(True)
         self.sign_in.setFlat(True)
         self.sign_in.setObjectName("sign_in")
-        self.horizontalLayout_2.addWidget(self.sign_in)
-        self.horizontalLayout_2.setStretch(0, 1)
-        self.verticalLayout_3.addLayout(self.horizontalLayout_2)
-        spacerItem3 = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem3)
-        self.horizontalLayout.addLayout(self.verticalLayout_3)
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
-        spacerItem4 = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem4)
+        self.button_layout.addWidget(self.sign_in)
+        self.button_layout.setStretch(0, 1)
+        self.verticalLayout_2.addLayout(self.button_layout)
         self.verticalLayout_2.setStretch(0, 1)
-        self.verticalLayout_2.setStretch(2, 1)
 
         self.retranslateUi(LoginDialog)
         QtCore.QMetaObject.connectSlotsByName(LoginDialog)
@@ -144,8 +126,8 @@ class Ui_LoginDialog(object):
         self.site.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "example.shotgunstudio.com", None, QtGui.QApplication.UnicodeUTF8))
         self.login.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "login", None, QtGui.QApplication.UnicodeUTF8))
         self.password.setPlaceholderText(QtGui.QApplication.translate("LoginDialog", "password", None, QtGui.QApplication.UnicodeUTF8))
-        self.cancel.setText(QtGui.QApplication.translate("LoginDialog", "CANCEL", None, QtGui.QApplication.UnicodeUTF8))
-        self.sign_in.setText(QtGui.QApplication.translate("LoginDialog", "SIGN IN", None, QtGui.QApplication.UnicodeUTF8))
+        self.cancel.setText(QtGui.QApplication.translate("LoginDialog", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
+        self.sign_in.setText(QtGui.QApplication.translate("LoginDialog", "Sign In", None, QtGui.QApplication.UnicodeUTF8))
 
 from ..aspect_preserving_label import AspectPreservingLabel
 from . import resources_rc

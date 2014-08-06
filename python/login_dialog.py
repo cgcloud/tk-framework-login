@@ -66,7 +66,7 @@ class LoginDialog(QtGui.QDialog):
         # set the logo
         pixmap = kwargs.get("pixmap")
         if not pixmap:
-            pixmap = QtGui.QPixmap(":/res/shotgun_logo_light_medium.png")
+            pixmap = QtGui.QPixmap(":/tk-framework-login/shotgun_with_text_logo.png")
         self.ui.logo.setPixmap(pixmap)
 
         # load up the values for the text fields

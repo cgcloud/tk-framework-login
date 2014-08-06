@@ -20,7 +20,9 @@ class AspectPreservingLabel(QtGui.QLabel):
 
     def setPixmap(self, pixmap):
         self._pix = pixmap
-        QtGui.QLabel.setPixmap(self, pixmap)
+        scaled_pixmap = self._pix.scaled(
+            self.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+        QtGui.QLabel.setPixmap(self, scaled_pixmap)
 
     def heightForWidth(self, width):
         if self._pix is None:
