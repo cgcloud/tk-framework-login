@@ -216,7 +216,12 @@ class Login(object):
         login = settings.value("login", None)
 
         (keyring, keyring_login) = self._get_keyring_values(site, login)
-        self._store.delete_password(keyring, keyring_login)
+        try:
+            self._store.delete_password(keyring, keyring_login)
+        except Exception:
+            # windows can sometimes fail to delete a password try to handle this gracefully
+            # by overwriting the saved password with a blank one
+            self._store.set_password(keyring, keyring_login, "")
 
     def _clear_saved_values(self):
         """ clear non password values """
