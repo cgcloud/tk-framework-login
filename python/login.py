@@ -177,7 +177,10 @@ class Login(object):
         # load up the values stored securely in the os specific keyring
         if login:
             (keyring, keyring_login) = self._get_keyring_values(site, login)
-            password = self._store.get_password(keyring, keyring_login)
+            try:
+                password = self._store.get_password(keyring, keyring_login)
+            except Exception:
+                password = None
         else:
             password = None
 
