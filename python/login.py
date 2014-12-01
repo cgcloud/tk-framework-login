@@ -207,8 +207,12 @@ class Login(object):
         settings.setValue("login", login)
 
         # save these settings securely in the os specific keyring
-        (keyring, keyring_login) = self._get_keyring_values(site, login)
-        self._store.set_password(keyring, keyring_login, password)
+        try:
+            (keyring, keyring_login) = self._get_keyring_values(site, login)
+            self._store.set_password(keyring, keyring_login, password)
+        except Exception, e:
+            # re-raise error as a LoginError
+            raise LoginError("Unable to save to keyring %s: %s" % (self._store, str(e)))
 
     # clear values ###########################################################################
     def _clear_password(self):
@@ -217,6 +221,10 @@ class Login(object):
         settings = self._get_settings("loginInfo")
         site = settings.value("site", None)
         login = settings.value("login", None)
+
+        # if we did not get valid values back, simply return
+        if not site or not login:
+            return
 
         (keyring, keyring_login) = self._get_keyring_values(site, login)
         try:
@@ -297,5 +305,10 @@ class Login(object):
         :returns: A tuple (keyring, login) where the keyring is the keyring
                   to use and the login is the login for that keyring to use.
         """
+        if not site:
+            raise ValueError("invalid site")
+        if not login:
+            raise ValueError("invalid login")
+
         parse = urlparse(site)
         return ("%s.login" % parse.netloc, login)

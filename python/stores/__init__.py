@@ -10,14 +10,34 @@
 
 
 def get_keyring_store():
+    """
+    Return the appropriate keyring implementation for the current environment.
+    """
     try:
-        from .gnomekeyring_store import GnomeKeyringStore
-        return GnomeKeyringStore
-    except ImportError:
-        pass
+        from .keyring_store import KeyringKeyringStore, keyring_module
 
-    try:
-        from .keyring_store import KeyringKeyringStore
+        # Grab the priority of the default keyring implementation
+        default_priority = keyring_module.get_keyring().priority
+
+        # Grab the priority of the Gnome keyring implementation
+        try:
+            # Use the underlying algorithm Gnome uses to check priority to avoid
+            # the exception if the GnomeKeyring is not available to the general
+            # Gnome python module
+            gnome_priority = int(keyring_module.backends.Gnome.Keyring.has_requisite_vars())
+        except Exception:
+            gnome_priority = 0
+
+        # If default priority is less then Gnome priority
+        if default_priority < gnome_priority:
+            # Try to load our own Gnome implementation
+            try:
+                from .gnomekeyring_store import GnomeKeyringStore
+                return GnomeKeyringStore
+            except ImportError:
+                pass
+
+        # Priority is either higher than GnomeKeyring or GnomeKeyring could not import
         return KeyringKeyringStore
     except ImportError:
         pass

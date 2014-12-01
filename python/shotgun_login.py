@@ -57,7 +57,9 @@ class ShotgunLogin(Login):
     def get_login(self, site=None, dialog_message=None, force_dialog=False):
         """ Returns the HumanUser for the current login.  Acts like login otherwise. """
         results = self.login(site, dialog_message, force_dialog)
-        return results["login"]
+        if results:
+            return results["login"]
+        return None
 
     def get_connection(self, site=None, dialog_message=None, force_dialog=False):
         """ Returns the connection for the current login.  Acts like login otherwise. """
@@ -104,8 +106,20 @@ class ShotgunLogin(Login):
         """
         # try to connect to Shotgun
         try:
+            # make sure that the inputs to Shotgun are encoded with a supported encoding
+            if site:
+                site = site.encode("utf-8")
+            if login:
+                login = login.encode("utf-8")
+            if password:
+                password = password.encode("utf-8")
+            if self._http_proxy:
+                http_proxy = self._http_proxy.encode("utf-8")
+            else:
+                http_proxy = self._http_proxy
+
             # connect and force an exchange so the authentication is validated
-            connection = Shotgun(site, login=login, password=password, http_proxy=self._http_proxy)
+            connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy)
             connection.find_one("HumanUser", [])
         except Exception, e:
             raise LoginError(str(e))

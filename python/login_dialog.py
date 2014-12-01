@@ -130,9 +130,8 @@ class LoginDialog(QtGui.QDialog):
         try:
             self.save_settings()
         except LoginError:
-            # error saving the settings
-            self.ui.message.setText("Could not store login information safely.")
-            return
+            # if saving the settings does not work, simply continue without them saved
+            pass
 
         # dialog is done
         self.accept()
