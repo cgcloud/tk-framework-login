@@ -61,6 +61,9 @@ class Login(object):
     # Instance cache
     _instances = {}  # cache of Login objects by namespace
 
+    # key for where to store info in globals
+    GLOBAL_INFO_KEY = "tk-framework-login.login.Login._info"
+
     ##########################################################################################
     # class methods
     @classmethod
@@ -180,6 +183,12 @@ class Login(object):
             try:
                 password = self._store.get_password(keyring, keyring_login)
             except Exception:
+                # check and see if the info has been tucked into globals
+                cached_globals = globals().get(self.GLOBAL_INFO_KEY)
+                if cached_globals:
+                    return (cached_globals["site"], cached_globals["login"], cached_globals["password"])
+
+                # could not load from keyring and do not have it cached in globals
                 password = None
         else:
             password = None
@@ -211,6 +220,14 @@ class Login(object):
             (keyring, keyring_login) = self._get_keyring_values(site, login)
             self._store.set_password(keyring, keyring_login, password)
         except Exception, e:
+            # could not save to keyring, at least save as global so that the info
+            # is available for the lifetime of this process
+            globals()[self.GLOBAL_INFO_KEY] = {
+                "site": site,
+                "login": login,
+                "password": password,
+            }
+
             # re-raise error as a LoginError
             raise LoginError("Unable to save to keyring %s: %s" % (self._store, str(e)))
 
@@ -221,6 +238,10 @@ class Login(object):
         settings = self._get_settings("loginInfo")
         site = settings.value("site", None)
         login = settings.value("login", None)
+
+        # remove any info from globals
+        if self.GLOBAL_INFO_KEY in globals():
+            del globals()[self.GLOBAL_INFO_KEY]
 
         # if we did not get valid values back, simply return
         if not site or not login:
