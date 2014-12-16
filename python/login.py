@@ -184,7 +184,7 @@ class Login(object):
                 password = self._store.get_password(keyring, keyring_login)
             except Exception:
                 # check and see if the info has been tucked into globals
-                cached_globals = globals().get(self.GLOBAL_INFO_KEY)
+                cached_globals = self._logger.__dict__.get(self.GLOBAL_INFO_KEY)
                 if cached_globals:
                     return (cached_globals["site"], cached_globals["login"], cached_globals["password"])
 
@@ -222,7 +222,7 @@ class Login(object):
         except Exception, e:
             # could not save to keyring, at least save as global so that the info
             # is available for the lifetime of this process
-            globals()[self.GLOBAL_INFO_KEY] = {
+            self._logger.__dict__[self.GLOBAL_INFO_KEY] = {
                 "site": site,
                 "login": login,
                 "password": password,
@@ -240,8 +240,8 @@ class Login(object):
         login = settings.value("login", None)
 
         # remove any info from globals
-        if self.GLOBAL_INFO_KEY in globals():
-            del globals()[self.GLOBAL_INFO_KEY]
+        if self.GLOBAL_INFO_KEY in self._logger.__dict__:
+            del self._logger.__dict__[self.GLOBAL_INFO_KEY]
 
         # if we did not get valid values back, simply return
         if not site or not login:
