@@ -126,9 +126,15 @@ class Login(object):
 
         self._site = site
 
+        if self._login_info and self._site != self._current_site:
+            # Attempt to login to a different site
+            # clear current login info
+            self._login_info = None
+            self._current_site = None
+
         if not force_dialog:
             # first check in memory cache
-            if self._login_info is not None and self._current_site == self._site:
+            if self._login_info is not None:
                 return self._login_info
 
             # next see if the saved values return a valid user
@@ -156,6 +162,7 @@ class Login(object):
             raise NotImplementedError("support for multiple sites is not yet implemented")
 
         self._login_info = None
+        self._current_site = None
         self._clear_password()
 
     ##########################################################################################
