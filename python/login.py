@@ -31,7 +31,7 @@ class Login(object):
     To use the interface you should simply be able to request the login info from an
     implementation:
         login_manager = LoginImplementation.get_instance_for_namespace("My Application")
-        login_info = login_manager.login()
+        login_info = login_manager.login(site="http://www.google.com")
 
     If the login info has already been collected, it will be returned.  If the saved values
     successfully authenticate, then the resulting login info will be returned.  Otherwise a
