@@ -33,6 +33,10 @@ class Login(object):
         login_manager = LoginImplementation.get_instance_for_namespace("My Application")
         login_info = login_manager.login(site="http://www.google.com")
 
+    It is possible to not specify a site, in that case latest login used with the
+    application will be used :
+        login_info = login_manager.login()
+
     If the login info has already been collected, it will be returned.  If the saved values
     successfully authenticate, then the resulting login info will be returned.  Otherwise a
     dialog is shown to the user to collect site/login/password.
@@ -293,7 +297,15 @@ class Login(object):
 
     # utilities ##############################################################################
     def _get_settings_group(self):
-        """ Return a Qsettings group name to store values in """
+        """
+        Return a Qsettings group name to store values in
+
+        If a site was specified in the login call, the name will have the following
+        form : loginInfo[/<protocol>]/<server name>[/<port number>], e.g.
+        sftp://my.server.com:22 will give 'loginInfo/sftp/my.server.com/22'
+
+        If no site was given, the name will be just 'loginInfo'
+        """
         group = "loginInfo"
         if self._site:
             parsed = urlparse(self._site)
@@ -344,6 +356,10 @@ class Login(object):
             raise ValueError("invalid site")
         if not login:
             raise ValueError("invalid login")
-
-        parse = urlparse(site)
+        # We use the full site url as our keyring name
+        # Another option would be parse it, and join parts with ".", if using
+        # "://" and ":" are causing problems.
+        # e.g. :
+        # parse = urlparse(site)
+        # keyring = ".".join([parse.scheme, parse.hostname, str(parse.port)])
         return ("%s.login" % site, login)
