@@ -25,12 +25,16 @@ class Login(object):
     This is an abstract class that provides an abstraction over storing login information
     for a service.  For each service it stores a site specification (for example the url
     to log into), a login (for example the username to log in with) and a password.  The
-    site and password are stored in a non-encrypted settings file, whereas the password is
+    site and login are stored in a non-encrypted settings file, whereas the password is
     stored in an encrypted keyring, using operating specific implementations.
 
     To use the interface you should simply be able to request the login info from an
     implementation:
         login_manager = LoginImplementation.get_instance_for_namespace("My Application")
+        login_info = login_manager.login(site="http://www.google.com")
+
+    It is possible to not specify a site, in that case latest login used with the
+    application will be used :
         login_info = login_manager.login()
 
     If the login info has already been collected, it will be returned.  If the saved values
@@ -104,6 +108,11 @@ class Login(object):
         # cache of authenticated values
         self._login_info = None
 
+        # default to empty site
+        self._site = None
+        # And no current site
+        self._current_site = None
+
     def login(self, site=None, dialog_message=None, force_dialog=False):
         """
         Return the login info for the current authenticated login.
@@ -118,8 +127,14 @@ class Login(object):
 
         :returns: None on failure and an implementation specific representation on success
         """
-        if site is not None:
-            raise NotImplementedError("support for multiple sites is not yet implemented")
+
+        self._site = site
+
+        if self._login_info and self._site != self._current_site:
+            # Attempt to login to a different site
+            # clear current login info
+            self._login_info = None
+            self._current_site = None
 
         if not force_dialog:
             # first check in memory cache
@@ -151,6 +166,7 @@ class Login(object):
             raise NotImplementedError("support for multiple sites is not yet implemented")
 
         self._login_info = None
+        self._current_site = None
         self._clear_password()
 
     ##########################################################################################
@@ -196,7 +212,7 @@ class Login(object):
 
     def _get_public_values(self):
         """ Return a tuple of the values that are stored unencrypted """
-        settings = self._get_settings("loginInfo")
+        settings = self._get_settings(self._get_settings_group())
         site = settings.value("site", None)
         login = settings.value("login", None)
         return (site, login)
@@ -210,7 +226,7 @@ class Login(object):
             raise LoginError("keyring does not support encryption")
 
         # save the public settings
-        settings = self._get_settings("loginInfo")
+        settings = self._get_settings(self._get_settings_group())
         settings.setValue("site", site)
         settings.setValue("login", login)
 
@@ -226,7 +242,7 @@ class Login(object):
     def _clear_password(self):
         """ clear password value """
         # remove settings stored in the os specific keyring
-        settings = self._get_settings("loginInfo")
+        settings = self._get_settings(self._get_settings_group())
         site = settings.value("site", None)
         login = settings.value("login", None)
 
@@ -245,7 +261,7 @@ class Login(object):
     def _clear_saved_values(self):
         """ clear non password values """
         # remove settings stored via QSettings
-        settings = self._get_settings("loginInfo")
+        settings = self._get_settings(self._get_settings_group())
         settings.remove("")
 
     # validate values ########################################################################
@@ -276,10 +292,33 @@ class Login(object):
 
         # cache results
         self._login_info = results
-
+        self._current_site = site
         return True
 
     # utilities ##############################################################################
+    def _get_settings_group(self):
+        """
+        Return a Qsettings group name to store values in
+
+        If a site was specified in the login call, the name will have the following
+        form : loginInfo[/<protocol>]/<server name>[/<port number>], e.g.
+        sftp://my.server.com:22 will give 'loginInfo/sftp/my.server.com/22'
+
+        If no site was given, the name will be just 'loginInfo'
+        """
+        group = "loginInfo"
+        if self._site:
+            parsed = urlparse(self._site)
+            # Prepend with the protocol, if any
+            if parsed.scheme:
+                group += "/%s" % parsed.scheme
+            # Add the hostname, avoiding to add the port here
+            group += "/%s" % parsed.hostname
+            # Add the port number, if any
+            if parsed.port:
+                group += "/%d" % parsed.port
+        return group
+
     def _get_settings(self, group=None):
         """ Returns the QSettings object to store the values in """
         settings = QtCore.QSettings()
@@ -317,6 +356,10 @@ class Login(object):
             raise ValueError("invalid site")
         if not login:
             raise ValueError("invalid login")
-
-        parse = urlparse(site)
-        return ("%s.login" % parse.netloc, login)
+        # We use the full site url as our keyring name
+        # Another option would be parse it, and join parts with ".", if using
+        # "://" and ":" are causing problems.
+        # e.g. :
+        # parse = urlparse(site)
+        # keyring = ".".join([parse.scheme, parse.hostname, str(parse.port)])
+        return ("%s.login" % site, login)
