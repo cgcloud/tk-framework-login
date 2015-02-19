@@ -356,6 +356,11 @@ class Login(object):
             raise ValueError("invalid site")
         if not login:
             raise ValueError("invalid login")
+        # Full backward compatibility with old behavior when it was not possible
+        # to specify a site in the login method : keep using exactly the same keyring
+        # name as before
+        if not self._site:
+            return ("%s.login" % urlparse(site).netloc, login)
         # We use the full site url as our keyring name
         # Another option would be parse it, and join parts with ".", if using
         # "://" and ":" are causing problems.
