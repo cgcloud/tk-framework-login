@@ -96,10 +96,10 @@ class Login(object):
 
     ##########################################################################################
     # public methods
-    def __init__(self):
+    def __init__(self, dialog_class=LoginDialog):
         """ Initialize a login manager """
         # control over the dialog that gets launched
-        self._dialog_class = LoginDialog
+        self._dialog_class = dialog_class
         self._dialog_kwargs = {}
 
         # keyring implementation to use
@@ -273,7 +273,7 @@ class Login(object):
         except LoginError:
             return False
 
-    def _check_values(self, site, login, password):
+    def _check_values(self, site, login, password, auth_token=None):
         """
         Authenticate the given values
 
@@ -286,7 +286,10 @@ class Login(object):
 
         # try to connect to the site
         try:
-            results = self._site_connect(site, login, password)
+            if auth_token:
+                results = self._site_connect(site, login, password, auth_token)
+            else:
+                results = self._site_connect(site, login, password)
         except Exception, e:
             raise LoginError("Could not connect to server", str(e))
 

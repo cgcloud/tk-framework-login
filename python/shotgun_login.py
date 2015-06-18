@@ -12,10 +12,12 @@ from urlparse import urlparse
 
 # package shotgun_api3 until toolkit upgrades to a version that
 # allows for user based logins
-from .shotgun_api3 import Shotgun
+from .shotgun_api3 import Shotgun, MissingTwoFactorAuthenticationFault
 
 from .login import Login
 from .login import LoginError
+
+from .login_dialog_sg import LoginDialog
 
 from .qt_abstraction import QtCore
 
@@ -25,7 +27,7 @@ from .qt_abstraction import QtCore
 class ShotgunLogin(Login):
     def __init__(self):
         """ Override the default constructor """
-        Login.__init__(self)
+        Login.__init__(self, LoginDialog)
         self._http_proxy = None
 
     def set_default_login(self, login):
@@ -53,6 +55,14 @@ class ShotgunLogin(Login):
             https://github.com/shotgunsoftware/python-api/wiki/Reference%3A-Methods#shotgun
         """
         self._http_proxy = http_proxy
+
+    def get_http_proxy(self):
+        """
+        Get the proxy to use when connecting to Shotgun.
+
+        :returns: The proxy string.
+        """
+        return self._http_proxy 
 
     def get_login(self, site=None, dialog_message=None, force_dialog=False):
         """ Returns the HumanUser for the current login.  Acts like login otherwise. """
@@ -89,7 +99,7 @@ class ShotgunLogin(Login):
             settings.beginGroup(group)
         return settings
 
-    def _site_connect(self, site, login, password):
+    def _site_connect(self, site, login, password, auth_token=None):
         """
         Authenticate the given values in Shotgun.
 
@@ -119,13 +129,15 @@ class ShotgunLogin(Login):
                 http_proxy = self._http_proxy
 
             # connect and force an exchange so the authentication is validated
-            connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy)
+            connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy, auth_token=auth_token)
             connection.find_one("HumanUser", [])
+        except MissingTwoFactorAuthenticationFault:
+            raise LoginError("Missing two factor authentication.")
         except Exception, e:
             raise LoginError(str(e))
 
         try:
-            user = connection.authenticate_human_user(login, password)
+            user = connection.authenticate_human_user(login, password, auth_token)
             if user is None:
                 raise LoginError("login not valid.")
             return {"connection": connection, "login": user}
