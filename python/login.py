@@ -97,7 +97,12 @@ class Login(object):
     ##########################################################################################
     # public methods
     def __init__(self, dialog_class=LoginDialog):
-        """ Initialize a login manager """
+        """
+        Initialize a login manager
+
+        :param dialog_class: Login dialog type to instantiate for this Login-based instance.
+            Defaults to LoginDialog.
+        """
         # control over the dialog that gets launched
         self._dialog_class = dialog_class
         self._dialog_kwargs = {}
@@ -294,6 +299,8 @@ class Login(object):
 
         # try to connect to the site
         try:
+            # Do not pass a fourth (auth_token) parameter in if it is not set so we can be
+            # compatible with existing login derived classes that don't implement this parameter.
             if auth_token:
                 results = self._site_connect(site, login, password, auth_token)
             else:

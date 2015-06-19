@@ -62,7 +62,7 @@ class LoginDialog(QtGui.QDialog):
         # set the logo
         pixmap = kwargs.get("pixmap")
         if not pixmap:
-            pixmap = QtGui.QPixmap(":/tk-framework-login/shotgun_with_text_logo.png")
+            pixmap = QtGui.QPixmap(":/tk-framework-login/shotgun_logo_light_medium.png")
         self.ui.logo.setPixmap(pixmap)
 
         hostname, login, password = self._login._get_saved_values()
@@ -253,7 +253,9 @@ class LoginDialog(QtGui.QDialog):
                 raise MissingTwoFactorAuthenticationFault
             # authentication did not succeed
             self._set_error_message(error_label, "%s:  %s" % (e[0], e[1]))
+            return
         else:
+            # END OF THE CHANGES TO BE COMPATIBLE WITH THE LOGIN FRAMEWORK
             self.accept()
         finally:
             # restore the cursor

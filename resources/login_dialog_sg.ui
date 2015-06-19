@@ -91,7 +91,7 @@ QLineEdit:Disabled {
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="resources.qrc">:/shotgun_authentication/shotgun_logo_light_medium.png</pixmap>
+        <pixmap resource="resources.qrc">:/tk-framework-login/shotgun_logo_light_medium.png</pixmap>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -112,7 +112,7 @@ QLineEdit:Disabled {
       </size>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="login_page">
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -326,7 +326,7 @@ background-color: rgb(35, 165, 225);</string>
              <string/>
             </property>
             <property name="pixmap">
-             <pixmap resource="resources.qrc">:/google_authenticator/google_authenticator.png</pixmap>
+             <pixmap resource="resources.qrc">:/tk-framework-login/google_authenticator.png</pixmap>
             </property>
             <property name="alignment">
              <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -375,6 +375,9 @@ background-color: rgb(35, 165, 225);</string>
                </property>
                <property name="text">
                 <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -497,7 +500,7 @@ background-color: rgb(35, 165, 225);</string>
              <string/>
             </property>
             <property name="pixmap">
-             <pixmap resource="resources.qrc">:/backup_codes/backup_codes_light_bg.png</pixmap>
+             <pixmap resource="resources.qrc">:/tk-framework-login/backup_codes_light_bg.png</pixmap>
             </property>
             <property name="alignment">
              <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -549,6 +552,9 @@ background-color: rgb(35, 165, 225);</string>
                </property>
                <property name="text">
                 <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
