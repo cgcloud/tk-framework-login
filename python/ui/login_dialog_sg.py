@@ -127,7 +127,7 @@ class Ui_LoginDialog(object):
 "}")
         self.forgot_password_link.setTextFormat(QtCore.Qt.RichText)
         self.forgot_password_link.setMargin(4)
-        self.forgot_password_link.setOpenExternalLinks(True)
+        self.forgot_password_link.setOpenExternalLinks(False)
         self.forgot_password_link.setObjectName("forgot_password_link")
         self.button_layout.addWidget(self.forgot_password_link)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
@@ -311,7 +311,7 @@ class Ui_LoginDialog(object):
         self.verticalLayout_2.setStretch(0, 1)
 
         self.retranslateUi(LoginDialog)
-        self.stackedWidget.setCurrentIndex(2)
+        self.stackedWidget.setCurrentIndex(0)
         QtCore.QObject.connect(self.cancel_tfa, QtCore.SIGNAL("clicked()"), LoginDialog.reject)
         QtCore.QObject.connect(self.cancel_backup, QtCore.SIGNAL("clicked()"), LoginDialog.reject)
         QtCore.QObject.connect(self.cancel, QtCore.SIGNAL("clicked()"), LoginDialog.reject)
