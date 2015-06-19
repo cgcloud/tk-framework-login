@@ -67,6 +67,8 @@ class LoginDialog(QtGui.QDialog):
 
         hostname, login, password = self._login._get_saved_values()
 
+        password, _ = self._login.unmangle_password(password)
+
         hostname = hostname or kwargs.get("default_site") or ""
         login = login or kwargs.get("default_login") or ""
 
@@ -266,7 +268,9 @@ class LoginDialog(QtGui.QDialog):
             login = self.ui.login.text()
             password = self.ui.password.text()
 
-            self._login._save_values(site, login, password)
+            # mangle the password before saving.
+            mangled_password = self._login.mangle_password(password)
+            self._login._save_values(site, login, mangled_password)
         except LoginError:
             # if saving the settings does not work, simply continue without them saved
             pass

@@ -12,7 +12,7 @@ from urlparse import urlparse
 
 # package shotgun_api3 until toolkit upgrades to a version that
 # allows for user based logins
-from .shotgun_api3 import Shotgun, MissingTwoFactorAuthenticationFault
+from .shotgun_api3 import Shotgun, MissingTwoFactorAuthenticationFault, AuthenticationFault
 
 from .login import Login
 from .login import LoginError
@@ -99,6 +99,38 @@ class ShotgunLogin(Login):
             settings.beginGroup(group)
         return settings
 
+    # Magic string that allows us to detect if we only have a password or both password and session token.
+    # Don't you dare use that string at the beginning of your password.
+    _MAGIC_STRING = "SG_S3SSI0N_AND_P4SSW0RD"
+    # Multi character separator with random chars to reduce the risk of a collision in a session token.
+    _SEPARATOR = "%$!@"
+
+    def mangle_password(self, password):
+        session_token = self.get_login_info()["connection"].config.session_token
+        if session_token:
+            return self._MAGIC_STRING + self._SEPARATOR + session_token + self._SEPARATOR + password
+        else:
+            return password
+
+    def unmangle_password(self, mangled):
+        if not mangled:
+            return None, None
+        if not mangled.startswith(self._MAGIC_STRING):
+            return mangled, None
+        else:
+            session_token_start = mangled.find(self._SEPARATOR) + len(self._SEPARATOR)
+            session_token_end = mangled.find(self._SEPARATOR, session_token_start)
+            password_start = session_token_end + len(self._SEPARATOR)
+            session_token = mangled[session_token_start: session_token_end]
+            password = mangled[password_start:]
+            return password, session_token
+
+    def _get_human_user(self, connection, login):
+        return connection.find_one(
+            'HumanUser',
+            [['sg_status_list', 'is', 'act'], ['login', 'is', login]], ['id', 'login'], '', 'all'
+        )
+
     def _site_connect(self, site, login, password, auth_token=None):
         """
         Authenticate the given values in Shotgun.
@@ -128,18 +160,36 @@ class ShotgunLogin(Login):
             else:
                 http_proxy = self._http_proxy
 
-            # connect and force an exchange so the authentication is validated
-            connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy, auth_token=auth_token)
-            connection.find_one("HumanUser", [])
+            password, session_token = self.unmangle_password(password)
+
+            # If an 2fa token was passed in, we can assume there's a password to test as well.
+            user = None
+            if auth_token:
+                # connect and force an exchange so the authentication is validated. Also, generate a
+                # session token to save since 2fa code are volatile.
+                connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy, auth_token=auth_token)
+                user = self._get_human_user(connection, login)
+                session_token = connection.get_session_token()
+            else:
+                # If we have a session token, we have to try it first.
+                if session_token:
+                    try:
+                        # connect and force an exchange so the authentication is validated
+                        connection = Shotgun(site, session_token=session_token, http_proxy=http_proxy)
+                        user = self._get_human_user(connection, login)
+                    except AuthenticationFault, e:
+                        # If we fail authenticating with a session token, we can ignore the error
+                        # and we'll simply move to to next authentication strategy.
+                        pass
+                if not user:
+                    # connect and force an exchange so the authentication is validated
+                    connection = Shotgun(site, login=login, password=password, http_proxy=http_proxy)
+                    user = self._get_human_user(connection, login)
         except MissingTwoFactorAuthenticationFault:
             raise LoginError("Missing two factor authentication.")
         except Exception, e:
             raise LoginError(str(e))
 
-        try:
-            user = connection.authenticate_human_user(login, password, auth_token)
-            if user is None:
-                raise LoginError("login not valid.")
-            return {"connection": connection, "login": user}
-        except Exception, e:
-            raise LoginError(str(e))
+        if user is None:
+            raise LoginError("login not valid.")
+        return {"connection": connection, "login": user, "session_token": session_token}
