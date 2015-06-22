@@ -96,10 +96,15 @@ class Login(object):
 
     ##########################################################################################
     # public methods
-    def __init__(self):
-        """ Initialize a login manager """
+    def __init__(self, dialog_class=LoginDialog):
+        """
+        Initialize a login manager
+
+        :param dialog_class: Login dialog type to instantiate for this Login-based instance.
+            Defaults to LoginDialog.
+        """
         # control over the dialog that gets launched
-        self._dialog_class = LoginDialog
+        self._dialog_class = dialog_class
         self._dialog_kwargs = {}
 
         # keyring implementation to use
@@ -207,7 +212,6 @@ class Login(object):
                 password = None
         else:
             password = None
-
         return (site, login, password)
 
     def _get_public_values(self):
@@ -215,6 +219,7 @@ class Login(object):
         settings = self._get_settings(self._get_settings_group())
         site = settings.value("site", None)
         login = settings.value("login", None)
+
         return (site, login)
 
     # set values #############################################################################
@@ -273,7 +278,15 @@ class Login(object):
         except LoginError:
             return False
 
-    def _check_values(self, site, login, password):
+    def get_login_info(self):
+        """
+        Returns the current login information.
+
+        :returns: The login information as returned by the _site_connect method.
+        """
+        return self._login_info
+
+    def _check_values(self, site, login, password, auth_token=None):
         """
         Authenticate the given values
 
@@ -286,7 +299,12 @@ class Login(object):
 
         # try to connect to the site
         try:
-            results = self._site_connect(site, login, password)
+            # Do not pass a fourth (auth_token) parameter in if it is not set so we can be
+            # compatible with existing login derived classes that don't implement this parameter.
+            if auth_token:
+                results = self._site_connect(site, login, password, auth_token)
+            else:
+                results = self._site_connect(site, login, password)
         except Exception, e:
             raise LoginError("Could not connect to server", str(e))
 
